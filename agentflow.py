@@ -5,12 +5,17 @@ This module provides the core Agent class for creating and running AI agents
 with support for multiple LLM providers (Ollama, OpenAI, Mistral).
 
 Example:
+    >>> import asyncio
     >>> from agentflow import Agent
-    >>> agent = Agent(model="llama3")
-    >>> response = agent.run("Hello, who are you?")
-    >>> print(response)
+    >>> 
+    >>> async def main():
+    >>>     agent = Agent(model="llama3")
+    >>>     response = await agent.arun("Hello, who are you?")
+    >>>     print(response)
+    >>> 
+    >>> asyncio.run(main())
 
-Version: 0.4.0
+Version: 0.5.0
 Author: Hamadi Chaabani
 License: MIT
 """
@@ -20,6 +25,7 @@ import httpx
 import json
 import inspect
 import os
+import asyncio
 from abc import ABC, abstractmethod
 from functools import wraps
 
@@ -126,33 +132,44 @@ class FileMemory(Memory):
         return len(self.messages)
 
 
-# --- Model Architecture ---
+# --- Model Architecture (Async-First) ---
 
 class Model(ABC):
-    """Abstract base class for LLM providers."""
+    """Abstract base class for LLM providers (async-first)."""
     
     @abstractmethod
-    def generate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
-        """Generate a response from the model."""
+    async def agenerate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
+        """
+        Generate a response from the model (async).
+        
+        This is the primary method that all models must implement.
+        """
         pass
+    
+    def generate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
+        """
+        Synchronous wrapper for agenerate().
+        
+        Provided for backward compatibility.
+        """
+        return asyncio.run(self.agenerate(messages, system_prompt))
 
 
 class Ollama(Model):
-    """Ollama LLM provider."""
+    """Ollama LLM provider (async-first)."""
     
     def __init__(self, model: str = "llama3", base_url: str = "http://localhost:11434"):
         self.model = model
         self.base_url = base_url.rstrip("/")
         
-    def generate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
+    async def agenerate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
         url = f"{self.base_url}/api/chat"
         
         # Prepare messages
         msgs = messages.copy()
         if system_prompt:
-            # Check if system prompt already exists
             if msgs and msgs[0].get("role") == "system":
-                pass # Already has system prompt
+                pass  # Already has system prompt
             else:
                 msgs.insert(0, {"role": "system", "content": system_prompt})
         
@@ -164,8 +181,8 @@ class Ollama(Model):
         }
         
         try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(url, json=payload)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(url, json=payload)
                 response.raise_for_status()
                 
         except Exception as e:
@@ -179,7 +196,7 @@ class Ollama(Model):
 
 
 class OpenAI(Model):
-    """OpenAI LLM provider."""
+    """OpenAI LLM provider (async-first)."""
     
     def __init__(self, model: str = "gpt-4o", api_key: Optional[str] = None):
         self.model = model
@@ -187,7 +204,7 @@ class OpenAI(Model):
         if not self.api_key:
             raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY env var or pass api_key.")
             
-    def generate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
+    async def agenerate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
         url = "https://api.openai.com/v1/chat/completions"
         
         msgs = messages.copy()
@@ -209,8 +226,8 @@ class OpenAI(Model):
         }
         
         try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(url, headers=headers, json=payload)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
                 response.raise_for_status()
         except Exception as e:
             raise LLMConnectionError(f"OpenAI connection failed: {str(e)}") from e
@@ -223,7 +240,7 @@ class OpenAI(Model):
 
 
 class Mistral(Model):
-    """Mistral AI LLM provider."""
+    """Mistral AI LLM provider (async-first)."""
     
     def __init__(self, model: str = "mistral-large-latest", api_key: Optional[str] = None):
         self.model = model
@@ -231,7 +248,7 @@ class Mistral(Model):
         if not self.api_key:
             raise ValueError("Mistral API key not found. Set MISTRAL_API_KEY env var or pass api_key.")
             
-    def generate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
+    async def agenerate(self, messages: List[Dict[str, str]], system_prompt: Optional[str] = None) -> str:
         url = "https://api.mistral.ai/v1/chat/completions"
         
         msgs = messages.copy()
@@ -253,8 +270,8 @@ class Mistral(Model):
         }
         
         try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(url, headers=headers, json=payload)
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(url, headers=headers, json=payload)
                 response.raise_for_status()
         except Exception as e:
             raise LLMConnectionError(f"Mistral connection failed: {str(e)}") from e
@@ -266,11 +283,11 @@ class Mistral(Model):
             raise LLMResponseError(f"Failed to parse Mistral response: {str(e)}") from e
 
 
-# --- Core Agent ---
+# --- Core Agent (Async-First) ---
 
 class Agent:
     """
-    A minimalist AI agent that interfaces with various LLMs.
+    A minimalist AI agent that interfaces with various LLMs (async-first).
     """
     
     def __init__(
@@ -336,8 +353,12 @@ class Agent:
         self._tools[func.__name__] = tool_schema
         return func
         
-    def run(self, prompt: str, max_iterations: int = 5) -> str:
-        """Run the agent with a given prompt."""
+    async def arun(self, prompt: str, max_iterations: int = 5) -> str:
+        """
+        Run the agent with a given prompt (async - primary method).
+        
+        This is the main async entry point with a robust Think → Act loop.
+        """
         self.memory.add("user", prompt)
         
         for iteration in range(max_iterations):
@@ -347,11 +368,11 @@ class Agent:
             if self._tools:
                 system_prompt = self._build_system_prompt()
             
-            # Delegate generation to the model
-            response_content = self.model.generate(messages, system_prompt)
+            # Async LLM call
+            response_content = await self.model.agenerate(messages, system_prompt)
             
-            # Check for tool call
-            tool_call = self._detect_tool_call(response_content)
+            # Robust tool detection
+            tool_call = self._safe_parse_tool_call(response_content)
             
             if tool_call:
                 try:
@@ -373,6 +394,14 @@ class Agent:
         final_response = "I apologize, but I've reached the maximum number of reasoning steps."
         self.memory.add("assistant", final_response)
         return final_response
+    
+    def run(self, prompt: str, max_iterations: int = 5) -> str:
+        """
+        Run the agent with a given prompt (sync wrapper).
+        
+        Provided for backward compatibility. Internally calls arun() via asyncio.run().
+        """
+        return asyncio.run(self.arun(prompt, max_iterations))
             
     def _build_system_prompt(self) -> str:
         tools_json = []
@@ -391,19 +420,32 @@ class Agent:
         )
         return prompt
 
-    def _detect_tool_call(self, response: str) -> Optional[Dict[str, Any]]:
+    def _safe_parse_tool_call(self, response: str) -> Optional[Dict[str, Any]]:
+        """
+        Robustly detect and parse tool calls from LLM response.
+        
+        Handles malformed JSON gracefully.
+        """
         response = response.strip()
+        
         if response.startswith("{") and '"tool"' in response:
             try:
-                if response.startswith("```json"): response = response[7:]
-                if response.startswith("```"): response = response[3:]
-                if response.endswith("```"): response = response[:-3]
+                # Clean up potential markdown code blocks
+                if response.startswith("```json"):
+                    response = response[7:]
+                if response.startswith("```"):
+                    response = response[3:]
+                if response.endswith("```"):
+                    response = response[:-3]
                 
                 data = json.loads(response.strip())
+                
                 if isinstance(data, dict) and "tool" in data:
                     return data
             except json.JSONDecodeError:
+                # JSON parsing failed - not a valid tool call
                 pass
+                
         return None
 
     def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
@@ -417,9 +459,11 @@ class Agent:
             raise ToolExecutionError(f"Error executing '{tool_name}': {str(e)}") from e
     
     def clear_history(self) -> None:
+        """Clear the conversation history."""
         self.memory.clear()
     
     def get_history(self) -> List[Dict[str, str]]:
+        """Get the current conversation history."""
         return self.memory.get_messages()
     
     def __repr__(self) -> str:
@@ -428,7 +472,7 @@ class Agent:
 
 
 # Module-level convenience
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __all__ = [
     "Agent", "Model", "Ollama", "OpenAI", "Mistral",
     "Memory", "InMemory", "FileMemory",

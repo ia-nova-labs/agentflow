@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-26
+
+### Added
+- 🚀 **Async-First Architecture** - Framework transformed to async-first like FastAPI
+- `Model.agenerate()` - Primary async method for all LLM providers
+- `Agent.arun()` - Primary async method for running agents
+- Sync wrappers (`generate()`, `run()`) for backward compatibility
+- `httpx.AsyncClient` for all HTTP communications
+- `example_async.py` demonstrating async usage and concurrent execution
+- Robust tool call parsing with `_safe_parse_tool_call()`
+
+### Changed
+- **BREAKING (Internal)**: All model implementations now use `async`/`await`
+- `Ollama`, `OpenAI`, `Mistral` now implement `agenerate()` as primary method
+- `Agent.run()` is now a sync wrapper around `arun()`
+- Version bumped to 0.5.0 to reflect major architectural shift
+
+### Migration Guide
+
+```python
+# v0.4 (still works in v0.5)
+agent = Agent()
+response = agent.run("Hello")
+
+# v0.5 (recommended for best performance)
+import asyncio
+
+async def main():
+    agent = Agent()
+   response = await agent.arun("Hello")
+    
+asyncio.run(main())
+```
+
 ## [0.4.0] - 2025-11-26
 
 ### Added
