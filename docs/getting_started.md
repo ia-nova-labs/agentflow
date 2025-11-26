@@ -111,6 +111,55 @@ print(f"Total messages: {len(history)}")
 agent.clear_history()
 ```
 
+## Working with Tools (New in v0.2)
+
+AgentFlow v0.2 introduces the `@agent.tool` decorator, allowing you to give your agent capabilities like calculation, web search, or API access.
+
+### Creating a Tool
+
+Simply decorate a Python function with `@agent.tool`. The agent will automatically understand how to use it based on the function name, docstring, and type hints.
+
+```python
+@agent.tool
+def calculate(expression: str) -> float:
+    """Evaluate a mathematical expression."""
+    return eval(expression)
+```
+
+### Using Tools
+
+Once registered, the agent will decide when to use the tool:
+
+```python
+# The agent will use the calculate tool for this
+response = agent.run("What is 123 * 456?")
+print(response)
+```
+
+### Multi-Step Reasoning
+
+The agent can use tools multiple times to solve complex problems:
+
+```python
+@agent.tool
+def get_weather(city: str) -> str:
+    """Get weather for a city."""
+    # ... implementation ...
+    return "Sunny, 25°C"
+
+response = agent.run("Is it hotter in Paris or London right now?")
+# Agent will:
+# 1. Call get_weather("Paris")
+# 2. Call get_weather("London")
+# 3. Compare and answer
+```
+
+### Best Practices for Tools
+
+1. **Type Hints**: Always use Python type hints (`str`, `int`, `float`, `bool`). The agent uses these to know what arguments to pass.
+2. **Docstrings**: Write clear docstrings describing *what* the tool does and *when* to use it.
+3. **Return Values**: Return simple data types (strings, numbers, dictionaries) that are easy for the LLM to understand.
+
 ## Error Handling
 
 Always handle potential errors:
@@ -158,16 +207,26 @@ except LLMResponseError as e:
 1. List available models: `ollama list`
 2. Pull the model: `ollama pull <model-name>`
 
+### "Tool execution failed"
+
+**Problem**: A tool raised an exception during execution.
+
+**Solutions**:
+1. Check your tool implementation for errors
+2. Add try/except blocks within your tool function
+3. Return a descriptive error string instead of raising an exception
+
 ## Examples
 
 Check out the `examples/` directory for more:
 
 - `example_basic.py` - Comprehensive basic usage demonstrations
+- `example_tools.py` - Demonstrates calculator and weather tools
 
 To run an example:
 ```bash
 cd examples
-python example_basic.py
+python example_tools.py
 ```
 
 ## What's Next?
@@ -176,10 +235,10 @@ Now that you have the basics down, you can:
 
 1. **Experiment** with different models
 2. **Explore** multi-turn conversations
-3. **Wait for v0.2** which will add:
-   - Tool support (@agent.tool decorator)
-   - Function calling capabilities
-   - Think → Act loop
+3. **Try Tools** to give your agent superpowers
+4. **Wait for v0.3** which will add:
+   - Memory persistence (save to file)
+   - Automatic memory management
 
 ## API Reference
 
@@ -190,7 +249,8 @@ Agent(model: str = "llama3", base_url: str = "http://localhost:11434")
 ```
 
 **Methods**:
-- `run(prompt: str) -> str` - Send a prompt and get a response
+- `run(prompt: str, max_iterations: int = 5) -> str` - Send a prompt and get a response
+- `tool(func: Callable) -> Callable` - Decorator to register a tool
 - `get_history() -> List[Dict[str, str]]` - Get conversation history
 - `clear_history() -> None` - Clear conversation history
 
@@ -198,12 +258,14 @@ Agent(model: str = "llama3", base_url: str = "http://localhost:11434")
 - `model: str` - The model name
 - `base_url: str` - The Ollama API URL
 - `messages: List[Dict[str, str]]` - Message history
+- `_tools: Dict` - Registered tools
 
 ### Exceptions
 
 - `AgentFlowError` - Base exception for all AgentFlow errors
 - `LLMConnectionError` - Connection to Ollama failed
 - `LLMResponseError` - Invalid response from Ollama
+- `ToolExecutionError` - Tool execution failed
 
 ## Philosophy
 
@@ -224,7 +286,6 @@ AgentFlow follows these principles:
 
 Ready to dive deeper? Here's what's coming in future versions:
 
-- **v0.2**: Tools and function calling
 - **v0.3**: Memory persistence
 - **v0.4**: Multi-model support (OpenAI, Mistral, Ollama)
 - **v0.5**: Advanced reasoning loops

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-11-26
+
+### Added
+- `@agent.tool` decorator for easy tool registration
+- Automatic tool schema generation from docstrings and type hints
+- Think → Act loop for tool execution (max 5 iterations)
+- `ToolExecutionError` for handling tool failures
+- `example_tools.py` demonstrating calculator and weather tools
+- Comprehensive documentation for "Working with Tools"
+
+### Changed
+- `Agent.run()` now supports `max_iterations` parameter
+- Updated `Agent` class to store and manage tools
+- Enhanced system prompt to include tool definitions
+
 ## [0.1.0] - 2025-11-26
 
 ### Added
