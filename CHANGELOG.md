@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-11-26
+
+### Added
+- `Memory` abstract base class for flexible memory management
+- `InMemory` class for default ephemeral storage
+- `FileMemory` class for JSON-based persistent storage
+- `Agent` now accepts a `memory` parameter
+- `example_memory.py` demonstrating persistence usage
+- Documentation for "Managing Memory"
+
+### Changed
+- Refactored `Agent` to use `Memory` interface instead of internal list
+- `clear_history()` and `get_history()` now delegate to memory backend
+- Updated `Agent.__repr__` to show memory type
+
 ## [0.2.0] - 2025-11-26
 
 ### Added

@@ -10,7 +10,7 @@ Example:
     >>> response = agent.run("Hello, who are you?")
     >>> print(response)
 
-Version: 0.2.0
+Version: 0.3.0
 Author: Hamadi Chaabani
 License: MIT
 """
@@ -19,6 +19,8 @@ from typing import List, Dict, Optional, Any, Callable
 import httpx
 import json
 import inspect
+import os
+from abc import ABC, abstractmethod
 from functools import wraps
 
 
@@ -42,6 +44,87 @@ class ToolExecutionError(AgentFlowError):
     pass
 
 
+class Memory(ABC):
+    """Abstract base class for agent memory."""
+    
+    @abstractmethod
+    def add(self, role: str, content: str) -> None:
+        """Add a message to memory."""
+        pass
+    
+    @abstractmethod
+    def get_messages(self) -> List[Dict[str, str]]:
+        """Get all messages in memory."""
+        pass
+    
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear all messages from memory."""
+        pass
+        
+    @abstractmethod
+    def count(self) -> int:
+        """Return the number of messages in memory."""
+        pass
+
+
+class InMemory(Memory):
+    """Simple in-memory storage for messages."""
+    
+    def __init__(self):
+        self.messages: List[Dict[str, str]] = []
+        
+    def add(self, role: str, content: str) -> None:
+        self.messages.append({"role": role, "content": content})
+        
+    def get_messages(self) -> List[Dict[str, str]]:
+        return self.messages.copy()
+        
+    def clear(self) -> None:
+        self.messages = []
+        
+    def count(self) -> int:
+        return len(self.messages)
+
+
+class FileMemory(Memory):
+    """Persistent memory storage using a JSON file."""
+    
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        self.messages: List[Dict[str, str]] = []
+        self._load()
+        
+    def _load(self) -> None:
+        """Load messages from file if it exists."""
+        if os.path.exists(self.file_path):
+            try:
+                with open(self.file_path, 'r', encoding='utf-8') as f:
+                    self.messages = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                # If file is corrupted or empty, start fresh
+                self.messages = []
+    
+    def _save(self) -> None:
+        """Save messages to file."""
+        with open(self.file_path, 'w', encoding='utf-8') as f:
+            json.dump(self.messages, f, indent=2)
+            
+    def add(self, role: str, content: str) -> None:
+        self.messages.append({"role": role, "content": content})
+        self._save()
+        
+    def get_messages(self) -> List[Dict[str, str]]:
+        return self.messages.copy()
+        
+    def clear(self) -> None:
+        self.messages = []
+        self._save()
+        
+    def count(self) -> int:
+        return len(self.messages)
+
+
 class Agent:
     """
     A minimalist AI agent that interfaces with Ollama LLMs.
@@ -53,21 +136,19 @@ class Agent:
     Attributes:
         model (str): The name of the Ollama model to use (e.g., "llama3").
         base_url (str): The base URL of the Ollama API endpoint.
-        messages (List[Dict[str, str]]): Conversation history.
+        memory (Memory): The memory storage backend.
         
     Example:
         >>> agent = Agent(model="llama3")
         >>> response = agent.run("What is Python?")
-        >>> print(response)
-        >>> # Continue the conversation
-        >>> response = agent.run("Tell me more about it")
         >>> print(response)
     """
     
     def __init__(
         self,
         model: str = "llama3",
-        base_url: str = "http://localhost:11434"
+        base_url: str = "http://localhost:11434",
+        memory: Optional[Memory] = None
     ) -> None:
         """
         Initialize an Agent instance.
@@ -75,13 +156,14 @@ class Agent:
         Args:
             model: The Ollama model name to use. Defaults to "llama3".
             base_url: The Ollama API base URL. Defaults to "http://localhost:11434".
+            memory: Optional Memory instance. Defaults to InMemory().
             
         Raises:
             AgentFlowError: If initialization fails.
         """
         self.model = model
         self.base_url = base_url.rstrip("/")
-        self.messages: List[Dict[str, str]] = []
+        self.memory = memory if memory else InMemory()
         self._tools: Dict[str, Dict[str, Any]] = {}  # Stores registered tools
         
     def tool(self, func: Callable) -> Callable:
@@ -180,15 +262,12 @@ class Agent:
             >>> print(response)
         """
         # Add user message to history
-        self.messages.append({
-            "role": "user",
-            "content": prompt
-        })
+        self.memory.add("user", prompt)
         
         # Think → Act loop
         for iteration in range(max_iterations):
             # Prepare messages with system prompt if tools are available
-            messages_to_send = self.messages.copy()
+            messages_to_send = self.memory.get_messages()
             
             if self._tools:
                 # Inject system prompt with tool information
@@ -218,15 +297,8 @@ class Agent:
                     )
                     
                     # Add tool execution to history
-                    self.messages.append({
-                        "role": "assistant",
-                        "content": f"[Tool Call: {tool_call['tool']}]"
-                    })
-                    
-                    self.messages.append({
-                        "role": "user",
-                        "content": f"[Tool Result: {json.dumps(result)}]"
-                    })
+                    self.memory.add("assistant", f"[Tool Call: {tool_call['tool']}]")
+                    self.memory.add("user", f"[Tool Result: {json.dumps(result)}]")
                     
                     # Continue the loop to get next response
                     continue
@@ -234,25 +306,16 @@ class Agent:
                 except Exception as e:
                     # Report error to LLM
                     error_msg = f"Tool execution failed: {str(e)}"
-                    self.messages.append({
-                        "role": "user",
-                        "content": f"[Tool Error: {error_msg}]"
-                    })
+                    self.memory.add("user", f"[Tool Error: {error_msg}]")
                     continue
             else:
                 # No tool call - this is the final answer
-                self.messages.append({
-                    "role": "assistant",
-                    "content": response_content
-                })
+                self.memory.add("assistant", response_content)
                 return response_content
         
         # Max iterations reached
         final_response = "I apologize, but I've reached the maximum number of reasoning steps. Please try simplifying your request."
-        self.messages.append({
-            "role": "assistant",
-            "content": final_response
-        })
+        self.memory.add("assistant", final_response)
         return final_response
     
     def _call_llm(self, messages: List[Dict[str, str]]) -> str:
@@ -418,7 +481,7 @@ class Agent:
             >>> agent.clear_history()
             >>> # Now the agent has no memory of previous messages
         """
-        self.messages = []
+        self.memory.clear()
     
     def get_history(self) -> List[Dict[str, str]]:
         """
@@ -433,16 +496,16 @@ class Agent:
             >>> history = agent.get_history()
             >>> print(len(history))  # 2 (user + assistant)
         """
-        return self.messages.copy()
+        return self.memory.get_messages()
     
     def __repr__(self) -> str:
         """Return a string representation of the Agent."""
-        return f"Agent(model='{self.model}', messages={len(self.messages)}, tools={len(self._tools)})"
+        return f"Agent(model='{self.model}', memory={self.memory.__class__.__name__}, messages={self.memory.count()}, tools={len(self._tools)})"
 
 
 # Module-level convenience
-__version__ = "0.2.0"
-__all__ = ["Agent", "AgentFlowError", "LLMConnectionError", "LLMResponseError", "ToolExecutionError"]
+__version__ = "0.3.0"
+__all__ = ["Agent", "Memory", "InMemory", "FileMemory", "AgentFlowError", "LLMConnectionError", "LLMResponseError", "ToolExecutionError"]
 
 
 if __name__ == "__main__":

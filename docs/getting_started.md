@@ -216,17 +216,53 @@ except LLMResponseError as e:
 2. Add try/except blocks within your tool function
 3. Return a descriptive error string instead of raising an exception
 
+## Managing Memory (New in v0.3)
+
+AgentFlow v0.3 introduces flexible memory management. By default, agents use `InMemory` storage which is lost when the script ends. You can use `FileMemory` to persist conversations.
+
+### Using Persistent Memory
+
+```python
+from agentflow import Agent, FileMemory
+
+# Create persistent memory
+memory = FileMemory("history.json")
+
+# Create agent with this memory
+agent = Agent(memory=memory)
+
+# This conversation will be saved to history.json
+agent.run("My name is Alice")
+```
+
+If you restart the script, the agent will remember everything!
+
+### Custom Memory
+
+You can create your own memory backend (e.g., for a database) by inheriting from the `Memory` class:
+
+```python
+from agentflow import Memory
+
+class RedisMemory(Memory):
+    def add(self, role, content): ...
+    def get_messages(self): ...
+    def clear(self): ...
+    def count(self): ...
+```
+
 ## Examples
 
 Check out the `examples/` directory for more:
 
 - `example_basic.py` - Comprehensive basic usage demonstrations
 - `example_tools.py` - Demonstrates calculator and weather tools
+- `example_memory.py` - Shows how to use persistent memory
 
 To run an example:
 ```bash
 cd examples
-python example_tools.py
+python example_memory.py
 ```
 
 ## What's Next?
@@ -236,9 +272,10 @@ Now that you have the basics down, you can:
 1. **Experiment** with different models
 2. **Explore** multi-turn conversations
 3. **Try Tools** to give your agent superpowers
-4. **Wait for v0.3** which will add:
-   - Memory persistence (save to file)
-   - Automatic memory management
+4. **Use Memory** to save conversations
+5. **Wait for v0.4** which will add:
+   - Unified Model API (OpenAI, Mistral, Ollama)
+   - Support for cloud LLMs
 
 ## API Reference
 
@@ -257,8 +294,13 @@ Agent(model: str = "llama3", base_url: str = "http://localhost:11434")
 **Attributes**:
 - `model: str` - The model name
 - `base_url: str` - The Ollama API URL
-- `messages: List[Dict[str, str]]` - Message history
+- `memory: Memory` - The memory backend
 - `_tools: Dict` - Registered tools
+
+### Memory Classes
+
+- `InMemory` - Ephemeral list-based storage (default)
+- `FileMemory` - JSON file-based persistent storage
 
 ### Exceptions
 
@@ -286,7 +328,6 @@ AgentFlow follows these principles:
 
 Ready to dive deeper? Here's what's coming in future versions:
 
-- **v0.3**: Memory persistence
 - **v0.4**: Multi-model support (OpenAI, Mistral, Ollama)
 - **v0.5**: Advanced reasoning loops
 - **v0.6**: MCP integration
