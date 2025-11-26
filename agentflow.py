@@ -9,13 +9,13 @@ Example:
     >>> from agentflow import Agent
     >>> 
     >>> async def main():
-    >>>     agent = Agent(model="llama3")
+    >>>     agent = Agent(model="llama3", debug=True)
     >>>     response = await agent.arun("Hello, who are you?")
     >>>     print(response)
     >>> 
     >>> asyncio.run(main())
 
-Version: 0.5.0
+Version: 0.6.0
 Author: Hamadi Chaabani
 License: MIT
 """
@@ -26,8 +26,17 @@ import json
 import inspect
 import os
 import asyncio
+import logging
+import re
 from abc import ABC, abstractmethod
 from functools import wraps
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 class AgentFlowError(Exception):
@@ -47,6 +56,11 @@ class LLMResponseError(AgentFlowError):
 
 class ToolExecutionError(AgentFlowError):
     """Raised when a tool execution fails."""
+    pass
+
+
+class LoopDetectedError(AgentFlowError):
+    """Raised when an infinite loop is detected."""
     pass
 
 
@@ -283,18 +297,21 @@ class Mistral(Model):
             raise LLMResponseError(f"Failed to parse Mistral response: {str(e)}") from e
 
 
-# --- Core Agent (Async-First) ---
+# --- Core Agent (Async-First with Robust Loop) ---
 
 class Agent:
     """
-    A minimalist AI agent that interfaces with various LLMs (async-first).
+    A minimalist AI agent that interfaces with various LLMs (async-first with robust loop).
     """
     
     def __init__(
         self,
         model: Union[str, Model] = "llama3",
         base_url: str = "http://localhost:11434",
-        memory: Optional[Memory] = None
+        memory: Optional[Memory] = None,
+        debug: bool = False,
+        logger: Optional[logging.Logger] = None,
+        tool_timeout: int = 30
     ) -> None:
         """
         Initialize an Agent instance.
@@ -303,6 +320,9 @@ class Agent:
             model: Model name (str) or Model instance. If str, defaults to Ollama.
             base_url: Base URL for Ollama (only used if model is str).
             memory: Optional Memory instance. Defaults to InMemory().
+            debug: Enable debug logging.
+            logger: Custom logger instance.
+            tool_timeout: Timeout for tool execution in seconds.
         """
         # Backward compatibility: if model is string, assume Ollama
         if isinstance(model, str):
@@ -312,6 +332,15 @@ class Agent:
             
         self.memory = memory if memory else InMemory()
         self._tools: Dict[str, Dict[str, Any]] = {}
+        
+        # Logging Setup
+        self.debug = debug
+        self.logger = logger or logging.getLogger("agentflow")
+        if self.debug:
+            self.logger.setLevel(logging.DEBUG)
+        
+        # Tool timeout
+        self.tool_timeout = tool_timeout
         
     def tool(self, func: Callable) -> Callable:
         """Decorator to register a function as a tool."""
@@ -355,13 +384,19 @@ class Agent:
         
     async def arun(self, prompt: str, max_iterations: int = 5) -> str:
         """
-        Run the agent with a given prompt (async - primary method).
+        Run the agent with a given prompt (async - primary method with robust loop).
         
-        This is the main async entry point with a robust Think → Act loop.
+        This is the main async entry point with enhanced error handling and loop protection.
         """
         self.memory.add("user", prompt)
+        self.logger.info(f"Starting agent run: {prompt[:50]}...")
+        
+        # Track tool usage for loop detection
+        tool_usage_history: List[str] = []
         
         for iteration in range(max_iterations):
+            self.logger.info(f"Iteration {iteration + 1}/{max_iterations}")
+            
             messages = self.memory.get_messages()
             system_prompt = None
             
@@ -369,29 +404,53 @@ class Agent:
                 system_prompt = self._build_system_prompt()
             
             # Async LLM call
+            self.logger.debug(f"Calling LLM with {len(messages)} messages")
             response_content = await self.model.agenerate(messages, system_prompt)
+            self.logger.debug(f"LLM response: {response_content[:100]}...")
             
-            # Robust tool detection
-            tool_call = self._safe_parse_tool_call(response_content)
+            # Robust tool detection with auto-repair
+            tool_call = self._safe_parse_tool_call(response_content, iteration)
             
             if tool_call:
+                tool_name = tool_call["tool"]
+                arguments = tool_call.get("arguments", {})
+                
+                self.logger.info(f"Tool call detected: {tool_name} with args {arguments}")
+                
+                # Loop detection
+                tool_signature = f"{tool_name}:{json.dumps(arguments, sort_keys=True)}"
+                tool_usage_history.append(tool_signature)
+                
+                if self._detect_loop(tool_usage_history):
+                    self.logger.warning("Infinite loop detected! Breaking...")
+                    error_msg = "Loop detected: same tool called repeatedly with same arguments. Please try a different approach."
+                    self.memory.add("user", f"[System] {error_msg}")
+                    continue
+                
+                # Execute tool with timeout
                 try:
-                    result = self._execute_tool(
-                        tool_call["tool"],
-                        tool_call.get("arguments", {})
-                    )
-                    self.memory.add("assistant", f"[Tool Call: {tool_call['tool']}]")
+                    result = await self._execute_tool_with_timeout(tool_name, arguments)
+                    self.logger.debug(f"Tool result: {str(result)[:100]}...")
+                    self.memory.add("assistant", f"[Tool Call: {tool_name}]")
                     self.memory.add("user", f"[Tool Result: {json.dumps(result)}]")
+                    continue
+                except asyncio.TimeoutError:
+                    error_msg = f"Tool '{tool_name}' timed out after {self.tool_timeout}s"
+                    self.logger.error(error_msg)
+                    self.memory.add("user", f"[Tool Error: {error_msg}]")
                     continue
                 except Exception as e:
                     error_msg = f"Tool execution failed: {str(e)}"
+                    self.logger.error(error_msg)
                     self.memory.add("user", f"[Tool Error: {error_msg}]")
                     continue
             else:
+                self.logger.info("Final answer received")
                 self.memory.add("assistant", response_content)
                 return response_content
         
         final_response = "I apologize, but I've reached the maximum number of reasoning steps."
+        self.logger.warning(f"Max iterations reached ({max_iterations})")
         self.memory.add("assistant", final_response)
         return final_response
     
@@ -402,6 +461,13 @@ class Agent:
         Provided for backward compatibility. Internally calls arun() via asyncio.run().
         """
         return asyncio.run(self.arun(prompt, max_iterations))
+    
+    async def _execute_tool_with_timeout(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+        """Execute a tool with timeout protection."""
+        return await asyncio.wait_for(
+            asyncio.to_thread(self._execute_tool, tool_name, arguments),
+            timeout=self.tool_timeout
+        )
             
     def _build_system_prompt(self) -> str:
         tools_json = []
@@ -420,33 +486,79 @@ class Agent:
         )
         return prompt
 
-    def _safe_parse_tool_call(self, response: str) -> Optional[Dict[str, Any]]:
+    def _safe_parse_tool_call(self, response: str, iteration: int) -> Optional[Dict[str, Any]]:
         """
-        Robustly detect and parse tool calls from LLM response.
+        Robustly detect and parse tool calls from LLM response with auto-repair.
         
-        Handles malformed JSON gracefully.
+        Handles malformed JSON gracefully with repair attempts.
         """
         response = response.strip()
         
-        if response.startswith("{") and '"tool"' in response:
-            try:
-                # Clean up potential markdown code blocks
-                if response.startswith("```json"):
-                    response = response[7:]
-                if response.startswith("```"):
-                    response = response[3:]
-                if response.endswith("```"):
-                    response = response[:-3]
-                
-                data = json.loads(response.strip())
-                
-                if isinstance(data, dict) and "tool" in data:
-                    return data
-            except json.JSONDecodeError:
-                # JSON parsing failed - not a valid tool call
-                pass
-                
+        if not (response.startswith("{") and '"tool"' in response):
+            return None
+        
+        # Attempt 1: Standard parsing
+        try:
+            data = json.loads(response)
+            if isinstance(data, dict) and "tool" in data:
+                self.logger.debug("Tool call parsed successfully (standard)")
+                return data
+        except json.JSONDecodeError:
+            self.logger.warning("JSON parsing failed, attempting auto-repair...")
+        
+        # Attempt 2: Auto-repair
+        repaired = self._attempt_json_repair(response)
+        if repaired:
+            self.logger.info("JSON successfully auto-repaired")
+            return repaired
+        
+        # Failed: Send feedback to LLM
+        self.logger.warning("JSON auto-repair failed, requesting LLM to fix")
+        error_msg = (
+            "[System] Invalid JSON format. Please respond with valid JSON: "
+            '{"tool": "tool_name", "arguments": {"arg_name": "value"}}'
+        )
+        self.memory.add("user", error_msg)
         return None
+    
+    def _attempt_json_repair(self, text: str) -> Optional[Dict[str, Any]]:
+        """Attempt to repair common JSON formatting errors."""
+        # Remove markdown code blocks
+        text = text.strip()
+        if text.startswith("```json"):
+            text = text[7:]
+        if text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        
+        # Fix trailing commas
+        text = re.sub(r',\s*}', '}', text)
+        text = re.sub(r',\s*]', ']', text)
+        
+        # Try parsing
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict) and "tool" in data:
+                return data
+        except:
+            pass
+            
+        return None
+    
+    def _detect_loop(self, tool_history: List[str]) -> bool:
+        """
+        Detect if the agent is stuck in an infinite loop.
+        
+        Returns True if the same tool+args has been called 3+ times in a row.
+        """
+        if len(tool_history) < 3:
+            return False
+        
+        # Check last 3 calls
+        last_three = tool_history[-3:]
+        return len(set(last_three)) == 1
 
     def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         if tool_name not in self._tools:
@@ -472,11 +584,11 @@ class Agent:
 
 
 # Module-level convenience
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __all__ = [
     "Agent", "Model", "Ollama", "OpenAI", "Mistral",
     "Memory", "InMemory", "FileMemory",
-    "AgentFlowError", "LLMConnectionError", "LLMResponseError", "ToolExecutionError"
+    "AgentFlowError", "LLMConnectionError", "LLMResponseError", "ToolExecutionError", "LoopDetectedError"
 ]
 
 
