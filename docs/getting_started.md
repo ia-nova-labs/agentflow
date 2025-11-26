@@ -251,6 +251,33 @@ class RedisMemory(Memory):
     def count(self): ...
 ```
 
+## Using Different Models (New in v0.4)
+
+AgentFlow v0.4 supports multiple LLM providers. You can easily switch between local and cloud models.
+
+### Local Models (Ollama)
+
+This is the default. You can specify the model name directly:
+
+```python
+# Uses Ollama by default
+agent = Agent(model="llama3")
+```
+
+### Cloud Models (OpenAI, Mistral)
+
+To use cloud models, you need to set your API keys in environment variables (`OPENAI_API_KEY`, `MISTRAL_API_KEY`) or pass them explicitly.
+
+```python
+from agentflow import Agent, OpenAI, Mistral
+
+# Use OpenAI
+agent = Agent(model=OpenAI(model="gpt-4o"))
+
+# Use Mistral
+agent = Agent(model=Mistral(model="mistral-large-latest"))
+```
+
 ## Examples
 
 Check out the `examples/` directory for more:
@@ -258,11 +285,12 @@ Check out the `examples/` directory for more:
 - `example_basic.py` - Comprehensive basic usage demonstrations
 - `example_tools.py` - Demonstrates calculator and weather tools
 - `example_memory.py` - Shows how to use persistent memory
+- `example_models.py` - Demonstrates switching between Ollama, OpenAI, and Mistral
 
 To run an example:
 ```bash
 cd examples
-python example_memory.py
+python example_models.py
 ```
 
 ## What's Next?
@@ -273,9 +301,10 @@ Now that you have the basics down, you can:
 2. **Explore** multi-turn conversations
 3. **Try Tools** to give your agent superpowers
 4. **Use Memory** to save conversations
-5. **Wait for v0.4** which will add:
-   - Unified Model API (OpenAI, Mistral, Ollama)
-   - Support for cloud LLMs
+5. **Switch Models** to use the best AI for the job
+6. **Wait for v0.5** which will add:
+   - Real Think → Act loop (Observation, Reasoning, Action)
+   - Improved agent autonomy
 
 ## API Reference
 
@@ -292,10 +321,15 @@ Agent(model: str = "llama3", base_url: str = "http://localhost:11434")
 - `clear_history() -> None` - Clear conversation history
 
 **Attributes**:
-- `model: str` - The model name
-- `base_url: str` - The Ollama API URL
+- `model: Model` - The LLM provider instance
 - `memory: Memory` - The memory backend
 - `_tools: Dict` - Registered tools
+
+### Model Classes
+
+- `Ollama` - Local LLM provider (default)
+- `OpenAI` - OpenAI API provider
+- `Mistral` - Mistral AI API provider
 
 ### Memory Classes
 
@@ -328,7 +362,6 @@ AgentFlow follows these principles:
 
 Ready to dive deeper? Here's what's coming in future versions:
 
-- **v0.4**: Multi-model support (OpenAI, Mistral, Ollama)
 - **v0.5**: Advanced reasoning loops
 - **v0.6**: MCP integration
 - **v0.7**: Multi-agent workflows

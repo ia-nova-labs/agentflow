@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-11-26
+
+### Added
+- Unified `Model` abstract base class for LLM providers
+- `Ollama` class for local model support
+- `OpenAI` class for OpenAI API support
+- `Mistral` class for Mistral AI API support
+- `example_models.py` demonstrating multi-model usage
+- Documentation for "Using Different Models"
+
+### Changed
+- Refactored `Agent` to use `Model` interface
+- `Agent` now accepts `model` object or string (for backward compatibility)
+- Moved LLM communication logic from `Agent` to `Model` classes
+
 ## [0.3.0] - 2025-11-26
 
 ### Added
