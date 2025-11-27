@@ -381,6 +381,60 @@ class Agent:
         
         self._tools[func.__name__] = tool_schema
         return func
+    
+    async def add_mcp_tools(self, mcp_client):
+        """
+        Add tools from an MCP server to this agent.
+        
+        Args:
+            mcp_client: Connected MCPClient instance.
+            
+        Example:
+            >>> from agentflow.mcp import MCPClient
+            >>> client = MCPClient(transport="stdio", command=["npx", "..."])
+            >>> await client.connect()
+            >>> await agent.add_mcp_tools(client)
+        """
+        from mcp import MCPClient  # Import here to avoid circular dependency
+        
+        if not isinstance(mcp_client, MCPClient):
+            raise TypeError("mcp_client must be an MCPClient instance")
+        
+        # Discover tools from MCP server
+        mcp_tools = await mcp_client.list_tools()
+        
+        for tool_schema in mcp_tools:
+            tool_name = tool_schema["name"]
+            tool_description = tool_schema.get("description", "No description")
+            tool_params = tool_schema.get("inputSchema", {}).get("properties", {})
+            
+            # Create wrapper function that calls MCP tool
+            async def mcp_tool_wrapper(**kwargs):
+                return await mcp_client.call_tool(tool_name, kwargs)
+            
+            # Build parameters dict for our tool schema
+            parameters = {}
+            required = []
+            for param_name, param_info in tool_params.items():
+                param_type = param_info.get("type", "string")
+                parameters[param_name] = {"type": param_type}
+                if param_info.get("required", False):
+                    required.append(param_name)
+            
+            # Register as agent tool
+            mcp_tool_schema = {
+                "name": tool_name,
+                "description": tool_description,
+                "function": mcp_tool_wrapper,
+                "parameters": {
+                    "type": "object",
+                    "properties": parameters,
+                    "required": required
+                }
+            }
+            
+            self._tools[tool_name] = mcp_tool_schema
+            self.logger.info(f"Registered MCP tool: {tool_name}")
         
     async def arun(self, prompt: str, max_iterations: int = 5) -> str:
         """
@@ -584,7 +638,7 @@ class Agent:
 
 
 # Module-level convenience
-__version__ = "0.6.0"
+__version__ = "0.8.0"
 __all__ = [
     "Agent", "Model", "Ollama", "OpenAI", "Mistral",
     "Memory", "InMemory", "FileMemory",

@@ -7,93 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-11-27
+
+### Added
+- 🔌 **MCP Client Integration** - First Python framework with native MCP support
+- `mcp.py` module with `MCPClient` class
+- stdio transport for local MCP servers
+- JSON-RPC 2.0 protocol implementation
+- Automatic tool discovery from MCP servers (`tools/list`)
+- Automatic tool calling via MCP (`tools/call`)
+- `Agent.add_mcp_tools()` method for seamless integration
+- Async context manager support for MCPClient
+- `example_mcp.py` demonstrating filesystem and Git servers
+- Support for mixing local Python tools with MCP tools
+
+### Why This Matters
+MCP (Model Context Protocol) is Anthropic's vision for the future of AI tooling.
+AgentFlow is THE FIRST Python agent framework with native MCP support, positioning
+it as future-forward and ecosystem-compatible.
+
 ## [0.7.0] - 2025-11-26
 
 ### Added
-- 🧪 **TestClient (Killer Feature)** - FastAPI-inspired testing for agents
+- 🧪 **TestClient (Killer Feature)** - FastAPI-inspired testing
 - `testing.py` module with `MockModel` and `AgentTestClient`
-- `MockModel` - Test agents without real LLM API calls
-- `AgentTestClient` - Wrapper for easy testing with assertion helpers
-- Assertion helpers:
-  - `assert_tool_called(tool_name, times=None)` - Verify tool was called
-  - `assert_tool_not_called(tool_name)` - Verify tool was NOT called
-  - `assert_response_contains(text)` - Verify response content
-- `example_testing.py` demonstrating all testing patterns
-- `tests/test_agent.py` with 8 comprehensive unit tests
-- Testing runs completely offline (no LLM required)
-
-### Why This Matters
-This is THE differentiator from competitors:
-- **LangChain**: No easy testing ❌
-- **CrewAI**: Cannot mock LLMs ❌
-- **AutoGen**: Testing nightmare ❌
-- **AgentFlow**: TestClient makes it trivial ✅
+- Assertion helpers: `assert_tool_called`, `assert_tool_not_called`, `assert_response_contains`
+- `example_testing.py` with comprehensive demos
+- `tests/test_agent.py` with 8 unit tests
+- Completely offline testing (no LLM required)
 
 ## [0.6.0] - 2025-11-26
 
 ### Added
 - 🛡️ **Robust Loop Enhancement** - Production-ready Think → Act loop
-- JSON auto-repair for malformed LLM responses
-- Infinite loop detection (same tool+args 3x)
-- Tool timeout protection (default 30s, configurable)
-- Structured logging system with debug mode
-- Intelligent retry logic with LLM feedback
-- `LoopDetectedError` exception
-- `example_robust_loop.py` demonstrating robustness features
-
-### Changed
-- `_safe_parse_tool_call()` attempts JSON auto-repair
-- `arun()` includes comprehensive logging
-- Tool execution wrapped in timeout protection
+- JSON auto-repair for malformed responses
+- Infinite loop detection
+- Tool timeout protection (default 30s)
+- Structured logging with debug mode
+- `example_robust_loop.py`
 
 ## [0.5.0] - 2025-11-26
 
 ### Added
-- 🚀 **Async-First Architecture** - Framework transformed like FastAPI
-- `Model.agenerate()` - Primary async method for all LLM providers
-- `Agent.arun()` - Primary async method for running agents
-- Sync wrappers (`generate()`, `run()`) for backward compatibility
-- `httpx.AsyncClient` for all HTTP communications
-- `example_async.py` demonstrating async usage and concurrent execution
-
-### Changed
-- **BREAKING (Internal)**: All model implementations now use `async`/`await`
-- `Agent.run()` is now a sync wrapper around `arun()`
+- 🚀 **Async-First Architecture** - FastAPI-inspired
+- `Model.agenerate()` and `Agent.arun()` as primary methods
+- Sync wrappers for backward compatibility
+- `httpx.AsyncClient` for all HTTP
+- `example_async.py`
 
 ## [0.4.0] - 2025-11-26
 
 ### Added
-- Unified `Model` abstract base class for LLM providers
+- Unified `Model` ABC
 - `Ollama`, `OpenAI`, `Mistral` classes
-- `example_models.py` demonstrating multi-model usage
-
-### Changed
-- Refactored `Agent` to use `Model` interface
+- `example_models.py`
 
 ## [0.3.0] - 2025-11-26
 
 ### Added
-- `Memory` abstract base class for flexible memory management
-- `InMemory` and `FileMemory` classes
-- `example_memory.py` demonstrating persistence
-
-### Changed
-- Refactored `Agent` to use `Memory` interface
+- `Memory` ABC with `InMemory` and `FileMemory`
+- `example_memory.py`
 
 ## [0.2.0] - 2025-11-26
 
 ### Added
-- `@agent.tool` decorator for easy tool registration
-- Automatic tool schema generation
-- Think → Act loop for tool execution
-- `example_tools.py` demonstrating tools
+- `@agent.tool` decorator
+- Tool schema generation
+- Think → Act loop
+- `example_tools.py`
 
 ## [0.1.0] - 2025-11-26
 
 ### Added
-- Initial release of AgentFlow
-- Core `Agent` class with basic functionality
-- Ollama integration for local LLM support
-- Basic message handling and conversation management
-
-[0.1.0]: https://github.com/yourusername/agentflow/releases/tag/v0.1.0
+- Initial release
+- Core `Agent` class
+- Ollama integration
+- Basic conversation management
