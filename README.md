@@ -85,7 +85,7 @@ client = AgentTestClient(agent)
 
 response = client.run("Hello")
 client.assert_response_contains("Hello")
-client.assert_tool_called("my_tool")
+# client.assert_tool_called("my_tool")  # Use this when testing tools
 ```
 
 ## 🆚 Why AgentFlow?
