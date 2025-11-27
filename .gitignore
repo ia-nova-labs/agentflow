@@ -135,3 +135,4 @@ Thumbs.db
 
 # AgentFlow specific
 *.memory.json
+tests/agentflow.code-workspace
