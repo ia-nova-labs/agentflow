@@ -34,7 +34,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/chaabani/agentflow"
-Documentation = "https://github.com/chaabani/agentflow"
-Repository = "https://github.com/chaabani/agentflow"
-"Bug Tracker" = "https://github.com/chaabani/agentflow/issues"
+[project.urls]
+Homepage = "https://github.com/ia-nova-labs/agentflow"
+Source = "https://github.com/ia-nova-labs/agentflow"
+Issues = "https://github.com/ia-nova-labs/agentflow/issues"
+Documentation = "https://github.com/ia-nova-labs/agentflow"

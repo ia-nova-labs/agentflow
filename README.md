@@ -52,9 +52,9 @@ asyncio.run(main())
 agent = Agent(model="gpt-4o")
 
 @agent.tool
-def calculate(expression: str) -> float:
-    """Evaluate a mathematical expression."""
-    return eval(expression)
+def multiply(a: int, b: int) -> int:
+    """Multiply two numbers."""
+    return a * b
 
 response = await agent.arun("What is 123 * 456?")
 ```
