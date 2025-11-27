@@ -11,18 +11,15 @@ import os
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-# Read version from agentflow.py
-version = "1.0.0"
-
 setup(
     name="agentflow",
     version="1.0.0",
     author="Hamadi Chaabani",
-    author_email="",
+    author_email="chaabani.hammadi@gmail.com",
     description="Minimalist Python framework for building AI agents",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/agentflow-ai-labs/agentflow",
+    url="https://github.com/ia-nova-labs/agentflow",
     py_modules=["agentflow", "mcp", "testing"],
     install_requires=[
         "httpx>=0.27.0",
@@ -49,9 +46,9 @@ setup(
     ],
     keywords="ai agents llm ollama openai mistral mcp testing async",
     project_urls={
-        "Documentation": "https://github.com/agentflow-ai-labs/agentflow-docs",
-        "Examples": "https://github.com/agentflow-ai-labs/agentflow-examples",
-        "Source": "https://github.com/agentflow-ai-labs/agentflow",
-        "Bug Reports": "https://github.com/agentflow-ai-labs/agentflow/issues",
+        "Documentation": "https://github.com/ia-nova-labs/agentflow-docs",
+        "Examples": "https://github.com/ia-nova-labs/agentflow-examples",
+        "Source": "https://github.com/ia-nova-labs/agentflow",
+        "Bug Reports": "https://github.com/ia-nova-labs/agentflow/issues",
     },
 )
