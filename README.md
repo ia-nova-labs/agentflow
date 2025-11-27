@@ -27,7 +27,7 @@ AgentFlow is a production-ready framework that makes building AI agents simple, 
 ## 📥 Installation
 
 ```bash
-pip install agentflow
+pip install agentflow-ai==1.0.0
 ```
 
 ## ⚡ Quick Start
