@@ -7,7 +7,7 @@ and using their tools seamlessly within AgentFlow agents.
 MCP Specification: https://modelcontextprotocol.io
 
 Example:
-    >>> from agentflow.mcp import MCPClient
+    >>> from . import Agent, ToolExecutionErrort
     >>> 
     >>> # Connect to filesystem server
     >>> client = MCPClient(

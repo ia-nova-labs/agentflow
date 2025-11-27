@@ -22,7 +22,7 @@ License: MIT
 
 from typing import List, Dict, Any, Optional
 import asyncio
-from agentflow import Agent, Model
+from . import Agent, Model
 
 
 class MockModel(Model):

@@ -13,14 +13,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agentflow-ai",
-    version="1.0.2",
+    version="1.0.3",
     author="Hamadi Chaabani",
     author_email="chaabani.hammadi@gmail.com",
     description="Minimalist Python framework for building AI agents",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ia-nova-labs/agentflow",
-    py_modules=["agentflow", "mcp", "testing"],
+    packages=find_packages(),
     install_requires=[
         "httpx>=0.27.0",
     ],

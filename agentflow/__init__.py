@@ -638,7 +638,7 @@ class Agent:
 
 
 # Module-level convenience
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __all__ = [
     "Agent", "Model", "Ollama", "OpenAI", "Mistral",
     "Memory", "InMemory", "FileMemory",
