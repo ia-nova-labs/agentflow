@@ -95,8 +95,8 @@ client.assert_tool_called("my_tool")
 
 ## 📚 Documentation & Examples
 
-- **[Documentation](https://github.com/chaabani/agentflow-docs)** - Comprehensive guides and API reference
-- **[Examples](https://github.com/chaabani/agentflow-examples)** - 8 complete examples covering all features
+- **[Documentation](https://github.com/agentflow-ai-labs/agentflow-docs)** - Comprehensive guides and API reference
+- **[Examples](https://github.com/agentflow-ai-labs/agentflow-examples)** - 8 complete examples covering all features
 
 ## 🏗️ Architecture
 
@@ -127,9 +127,9 @@ Inspired by:
 
 ## 🔗 Ecosystem
 
-- **[agentflow](https://github.com/chaabani/agentflow)** - Main framework (this repo)
-- **[agentflow-docs](https://github.com/chaabani/agentflow-docs)** - Documentation
-- **[agentflow-examples](https://github.com/chaabani/agentflow-examples)** - Examples
+- **[agentflow](https://github.com/agentflow-ai-labs/agentflow)** - Main framework (this repo)
+- **[agentflow-docs](https://github.com/agentflow-ai-labs/agentflow-docs)** - Documentation
+- **[agentflow-examples](https://github.com/agentflow-ai-labs/agentflow-examples)** - Examples
 
 ## ⭐ Star History
 
