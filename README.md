@@ -1,5 +1,10 @@
 # AgentFlow
 
+<p align="center">
+  <img src="logo.png" alt="AgentFlow Logo" width="200"/>
+</p>
+
+
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
