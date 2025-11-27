@@ -90,24 +90,13 @@ client.assert_tool_called("my_tool")
 | **Easy Testing** | ✅ MockModel + TestClient | ❌ | ❌ | ❌ |
 | **Native MCP** | ✅ First framework | ❌ | ❌ | ❌ |
 | **Async-First** | ✅ | Partial | ❌ | ❌ |
-| **Minimalist** | ✅ <300 LOC core | ❌ | ❌ | ❌ |
+| **Minimalist** | ✅ <700 LOC core | ❌ | ❌ | ❌ |
 | **Production-Ready** | ✅ v1.0 | ✅ | Partial | Partial |
 
-## 📚 Documentation
+## 📚 Documentation & Examples
 
-- [Getting Started](docs/getting_started.md)
-- [MCP Integration](examples/example_mcp.py)
-- [Testing Guide](examples/example_testing.py)
-- [API Reference](docs/)
-
-## 🎯 Examples
-
-Check out the [examples/](examples/) directory:
-- `example_basic.py` - Basic usage
-- `example_tools.py` - Tool usage
-- `example_async.py` - Async and concurrent execution
-- `example_mcp.py` - MCP integration
-- `example_testing.py` - Testing patterns
+- **[Documentation](https://github.com/chaabani/agentflow-docs)** - Comprehensive guides and API reference
+- **[Examples](https://github.com/chaabani/agentflow-examples)** - 8 complete examples covering all features
 
 ## 🏗️ Architecture
 
@@ -135,6 +124,12 @@ Inspired by:
 - FastAPI's developer experience
 - Anthropic's MCP vision
 - The Python async ecosystem
+
+## 🔗 Ecosystem
+
+- **[agentflow](https://github.com/chaabani/agentflow)** - Main framework (this repo)
+- **[agentflow-docs](https://github.com/chaabani/agentflow-docs)** - Documentation
+- **[agentflow-examples](https://github.com/chaabani/agentflow-examples)** - Examples
 
 ## ⭐ Star History
 
