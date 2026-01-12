@@ -34,7 +34,6 @@ dev = [
 ]
 
 [project.urls]
-[project.urls]
 Homepage = "https://github.com/ia-nova-labs/agentflow"
 Source = "https://github.com/ia-nova-labs/agentflow"
 Issues = "https://github.com/ia-nova-labs/agentflow/issues"
