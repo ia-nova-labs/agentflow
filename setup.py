@@ -13,7 +13,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="agentflow-ai",
-    version="1.0.3",
+    version="1.0.9",
     author="Hamadi Chaabani",
     author_email="chaabani.hammadi@gmail.com",
     description="Minimalist Python framework for building AI agents",
