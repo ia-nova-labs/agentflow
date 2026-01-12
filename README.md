@@ -27,7 +27,7 @@ AgentFlow is a production-ready framework that makes building AI agents simple, 
 ## 📥 Installation
 
 ```bash
-pip install agentflow-ai==1.0.0
+pip install agentflow-ai==1.0.6
 ```
 
 ## ⚡ Quick Start
@@ -73,7 +73,7 @@ async with MCPClient(
     response = await agent.arun("List files in /tmp")
 ```
 
-## 🧪 Testing (Killer Feature)
+## 🧪 Testing
 
 ```python
 from agentflow.testing import MockModel, AgentTestClient
